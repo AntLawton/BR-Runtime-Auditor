@@ -4,6 +4,7 @@ import type { HarnessContext, HarnessFactoryOptions, HarnessPlugin } from '../ty
 import type { ParsedSst } from '../types/sst.js';
 
 const DEFAULT_PORTS = { auth: 9099, firestore: 8080, functions: 5001, storage: 9199 };
+const PROJECT_ID_PLACEHOLDERS = new Set(['YOUR_FIREBASE_PROJECT_ID', 'your-firebase-project-id']);
 
 function readFirebaseJson(repoRoot: string): Record<string, unknown> | undefined {
   try {
@@ -16,6 +17,29 @@ function readFirebaseJson(repoRoot: string): Record<string, unknown> | undefined
   }
 }
 
+function readFirebaseProjectId(repoRoot: string): string | undefined {
+  try {
+    const rc = JSON.parse(readFileSync(join(repoRoot, '.firebaserc'), 'utf8')) as {
+      projects?: { default?: string };
+    };
+    const id = rc.projects?.default;
+    return typeof id === 'string' && id.length > 0 ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveProjectId(hintsProjectId: string | undefined, repoRoot?: string): string {
+  const hinted =
+    hintsProjectId && !PROJECT_ID_PLACEHOLDERS.has(hintsProjectId) ? hintsProjectId : undefined;
+  if (hinted) return hinted;
+  if (repoRoot) {
+    const fromRc = readFirebaseProjectId(repoRoot);
+    if (fromRc) return fromRc;
+  }
+  return 'demo-runtime-audit';
+}
+
 function resolveEmulatorConfig(sst: ParsedSst, repoRoot?: string) {
   const hints = sst.runtimeProbeHints.emulator ?? {};
   const firebase = repoRoot ? readFirebaseJson(repoRoot) : undefined;
@@ -25,7 +49,7 @@ function resolveEmulatorConfig(sst: ParsedSst, repoRoot?: string) {
     firestorePort: emulators.firestore?.port ?? DEFAULT_PORTS.firestore,
     functionsPort: emulators.functions?.port ?? DEFAULT_PORTS.functions,
     storagePort: emulators.storage?.port ?? DEFAULT_PORTS.storage,
-    projectId: hints.project_id ?? 'demo-runtime-audit',
+    projectId: resolveProjectId(hints.project_id, repoRoot),
     region: hints.region ?? 'europe-west2',
     functionsBasePath: hints.functions_base_path ?? 'api',
   };

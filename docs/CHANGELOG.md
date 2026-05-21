@@ -1,5 +1,12 @@
 # Changelog
 
+## Tranche A-fix — emulator wiring (2026-05-21)
+
+- Resolve Firebase `project_id` from target repo `.firebaserc` when sidecar uses placeholder or omits it
+- Firestore and storage probes use unauthenticated client-style requests (drop `Bearer owner`, which bypasses rules)
+- Storage probe keeps full URL encoding for object paths (`%2F`, not literal slashes)
+- Sidecar fixture drops `YOUR_FIREBASE_PROJECT_ID` placeholder; unit test for `functionsUrl` resolution
+
 ## Tranche A (2026-05-21)
 
 - Stage 2 Tranche A: probes 1 (auth), 2 (db-rules-deny Firestore), 6 (rate-limit), 7a (storage-rules-deny)
