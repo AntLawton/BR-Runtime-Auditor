@@ -1,0 +1,26 @@
+# Copy-ready sidecar for IGV runtime probes (Tranche A).
+# Destination: C:\Users\Antho\RoH-App\packages\functions-igv\sst-probe-hints.yaml
+# Co-located with SST.md — Auditor merges this at run time (see sst-reader.ts).
+#
+# Replace project_id with your Firebase project ID (emulator displays it on boot).
+
+runtime_probe_hints:
+  emulator:
+    functions_base_path: igvApi
+    region: europe-west2
+    project_id: YOUR_FIREBASE_PROJECT_ID
+  auth:
+    protected_routes:
+      - method: GET
+        path: /igv/engagements
+        middleware: requireFacilitator
+    public_rate_limited_routes:
+      - method: POST
+        path: /igv/validate-code
+        limit_const: PUBLIC_VALIDATE_PER_HOUR
+        test_override: 5
+  db_rules:
+    firestore_deny_paths:
+      - igv-engagements/probe-test-id
+    storage_deny_paths:
+      - igv-audio/engagement-1/response-1/audio.webm
