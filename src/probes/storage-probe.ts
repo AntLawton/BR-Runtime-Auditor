@@ -28,11 +28,11 @@ export async function runStorageRulesProbe(ctx: HarnessContext): Promise<ProbeRe
   const subProbes: SubProbeResult[] = [];
 
   for (const objectPath of paths) {
-    const encoded = encodeURIComponent(objectPath).replace(/%2F/g, '/');
+    const encoded = encodeURIComponent(objectPath);
     const url = `http://127.0.0.1:${storagePort}/v0/b/${projectId}.appspot.com/o/${encoded}`;
     const res = await ctx.fetchFn(url, {
       method: 'POST',
-      headers: { Authorization: 'Bearer owner', 'Content-Type': 'text/plain' },
+      headers: { 'Content-Type': 'text/plain' },
       body: 'probe-write-test',
     });
     const denied = res.status === 403 || res.status === 401 || (ctx.mockMode && res.status === 403);

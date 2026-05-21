@@ -33,9 +33,7 @@ export async function runDbRulesProbe(ctx: HarnessContext): Promise<ProbeResult>
       `http://127.0.0.1:${firestorePort}/v1/projects/${projectId}/databases/(default)/documents/` +
       `${collection}/${docId ?? 'probe-test-id'}`;
 
-    const res = await ctx.fetchFn(url, {
-      headers: { Authorization: 'Bearer owner' },
-    });
+    const res = await ctx.fetchFn(url);
     const body = (await res.json().catch(() => ({}))) as { error?: { status?: string } };
     const denied =
       res.status === 403 ||
@@ -59,10 +57,7 @@ export async function runDbRulesProbe(ctx: HarnessContext): Promise<ProbeResult>
       `http://127.0.0.1:${firestorePort}/v1/projects/${projectId}/databases/(default)/documents/` +
       `${collection}/${docId ?? 'probe-test-id'}`;
     const res = await ctx.fetchFn(url, {
-      headers: {
-        Authorization: 'Bearer owner',
-        'X-BR-Simulate-Firestore-Down': '1',
-      },
+      headers: { 'X-BR-Simulate-Firestore-Down': '1' },
     });
     const failClosed = res.status >= 500 || res.status === 503;
     subProbes.push({

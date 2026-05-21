@@ -2,13 +2,12 @@
 # Destination: C:\Users\Antho\RoH-App\packages\functions-igv\sst-probe-hints.yaml
 # Co-located with SST.md — Auditor merges this at run time (see sst-reader.ts).
 #
-# Replace project_id with your Firebase project ID (emulator displays it on boot).
+# project_id optional — Auditor resolves from target repo .firebaserc when omitted or placeholder.
 
 runtime_probe_hints:
   emulator:
     functions_base_path: igvApi
     region: europe-west2
-    project_id: YOUR_FIREBASE_PROJECT_ID
   auth:
     protected_routes:
       - method: GET
