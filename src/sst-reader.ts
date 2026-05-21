@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { ParsedSst, RuntimeProbeHints } from './types/sst.js';
+import type { LaunchGate, ParsedSst, RuntimeProbeHints } from './types/sst.js';
 
 const YAML_BLOCK_RE = /```yaml\r?\n([\s\S]*?)```/;
 
@@ -21,6 +21,15 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function parseLaunchGate(value: unknown): LaunchGate | undefined {
+  const rec = asRecord(value);
+  if (!rec) return undefined;
+  const name = rec.name ? String(rec.name) : undefined;
+  const date = rec.date ? String(rec.date) : undefined;
+  if (name && date) return { name, date };
+  return undefined;
 }
 
 export function mergeProbeHints(
@@ -62,6 +71,8 @@ export function parseSstFile(sstPath: string, repoRoot?: string): ParsedSst {
   const meta = asRecord(yaml.meta) ?? {};
   const hintsFromSst = asRecord(meta.runtime_probe_hints) as RuntimeProbeHints | undefined;
   const hintsSidecar = readProbeHintsSidecar(absPath);
+  const mergedHints = mergeProbeHints(hintsFromSst ?? {}, hintsSidecar);
+  const launchGate = parseLaunchGate(meta.launch_gate) ?? parseLaunchGate(mergedHints.launch_gate);
   const mission = typeof yaml.mission === 'string' ? yaml.mission : undefined;
 
   return {
@@ -77,7 +88,8 @@ export function parseSstFile(sstPath: string, repoRoot?: string): ParsedSst {
       producer_file: entry.producer_file ? String(entry.producer_file) : undefined,
       description: entry.description ? String(entry.description) : undefined,
     })),
-    runtimeProbeHints: mergeProbeHints(hintsFromSst ?? {}, hintsSidecar),
+    runtimeProbeHints: mergedHints,
+    launchGate,
     repoRoot: repoRoot ? resolve(repoRoot) : dirname(absPath),
     sstPath: absPath,
     rawYaml: yaml,

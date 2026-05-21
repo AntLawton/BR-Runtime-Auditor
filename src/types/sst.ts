@@ -6,7 +6,13 @@ export interface AuthRouteHint {
   test_override?: number;
 }
 
+export interface LaunchGate {
+  name: string;
+  date: string;
+}
+
 export interface RuntimeProbeHints {
+  launch_gate?: LaunchGate;
   emulator?: {
     functions_base_path?: string;
     region?: string;
@@ -38,6 +44,7 @@ export interface ParsedSst {
   criticalContracts: string[];
   securityLayer: SecurityLayerEntry[];
   runtimeProbeHints: RuntimeProbeHints;
+  launchGate?: LaunchGate;
   repoRoot?: string;
   sstPath: string;
   rawYaml: Record<string, unknown>;
