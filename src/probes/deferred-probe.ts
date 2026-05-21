@@ -32,7 +32,7 @@ export function runTrancheBDeferred(probeId: string, note?: string): ProbeResult
     subProbes: [],
     evidence: [
       {
-        summary: note ?? 'Tranche B — not in NHS launch scope',
+        summary: note ?? 'Tranche B — not in current launch scope',
         citation: 'docs/COMPOSER2-RED-TEAM.md Tranche A scope',
       },
     ],

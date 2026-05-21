@@ -6,6 +6,9 @@ project_type: firebase-functions-codebase
 sst_version: '0.4'
 
 meta:
+  launch_gate:
+    name: NHS
+    date: '2026-05-25'
   security_layer:
     - name: igv-facilitator-claim-auth
       layer: auth-middleware

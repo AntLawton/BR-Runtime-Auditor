@@ -11,6 +11,7 @@ describe('sst-reader', () => {
     expect(sst.runtimeProbeHints.auth?.protected_routes?.[0]?.path).toBe('/igv/engagements');
     expect(sst.runtimeProbeHints.auth?.public_rate_limited_routes?.[0]?.test_override).toBe(5);
     expect(sst.runtimeProbeHints.db_rules?.firestore_deny_paths?.[0]).toContain('igv-engagements');
+    expect(sst.launchGate).toEqual({ name: 'NHS', date: '2026-05-25' });
   });
 
   it('mergeProbeHints overlays sidecar over SST meta', () => {

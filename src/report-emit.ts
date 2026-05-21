@@ -1,5 +1,5 @@
 import type { ProbeResult, RoutingCoverage, Verdict } from './types/probe-result.js';
-import type { ParsedSst } from './types/sst.js';
+import type { LaunchGate, ParsedSst } from './types/sst.js';
 
 export interface ReportOptions {
   sst: ParsedSst;
@@ -39,9 +39,16 @@ function formatEvidence(result: ProbeResult): string {
     .join('\n');
 }
 
-export function buildLaunchHeader(probeResults: ProbeResult[]): string {
+export function formatLaunchGateTitle(launchGate?: LaunchGate): string {
+  if (launchGate?.name && launchGate?.date) {
+    return `## Launch gate status (${launchGate.name} ${launchGate.date})`;
+  }
+  return '## Launch gate status';
+}
+
+export function buildLaunchHeader(probeResults: ProbeResult[], launchGate?: LaunchGate): string {
   const deferred = probeResults.filter((p) => p.verdict === 'DEFERRED');
-  const lines = ['## Launch gate status (NHS 2026-05-25)', ''];
+  const lines = [formatLaunchGateTitle(launchGate), ''];
   if (deferred.length === 0) {
     lines.push('All Tranche A runtime probes executed — no deferrals.');
   } else {
@@ -73,7 +80,7 @@ export function emitReport(opts: ReportOptions): string {
     `**SST path:** \`${opts.sst.sstPath}\``,
     `**Overall verdict:** ${overall}`,
     '',
-    buildLaunchHeader(opts.probeResults),
+    buildLaunchHeader(opts.probeResults, opts.sst.launchGate),
     '',
     '## Routing coverage',
     '',

@@ -35,7 +35,7 @@ describe('Tranche A — IGV integration (mock emulator)', () => {
       auditorVersion: '0.1.0-test',
       deterministic: true,
     });
-    expect(report).toContain('Launch gate status');
+    expect(report).toContain('Launch gate status (NHS 2026-05-25)');
     expect(report).toContain('DEFERRED');
     expect(report).toContain('runbook §Check 7');
     expect(report).toContain('Probe 7b');
