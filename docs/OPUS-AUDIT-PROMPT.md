@@ -1,10 +1,10 @@
 # Opus Audit Prompt — BR Runtime Auditor Tranche A
 
-**Audit target commit (Tranche A):** `7d35cde` — branch `feature/tranche-a-build`  
+**Audit target commit (Tranche A):** `fb57677` — branch `feature/tranche-a-build`  
 **Repo:** `AntLawton/BR-Runtime-Auditor`  
 **Gate:** Independent audit before Anthony runs the Auditor against IGV for NHS launch (2026-05-25).
 
-Opus MUST check out or diff against commit `7d35cde` exactly. Do not audit uncommitted working-tree changes or later commits unless Anthony explicitly expands scope.
+Opus MUST check out or diff against commit `fb57677` exactly. Do not audit uncommitted working-tree changes or later commits unless Anthony explicitly expands scope.
 
 ---
 
@@ -28,10 +28,10 @@ You are Opus-in-Cursor running an independent audit on the BR Runtime Auditor bu
 8. **Fail-closed coverage** — Probes 1, 2 verify non-2xx response on dependency failure (Probe 4 fail-closed is Tranche B).
 9. **§16 + §17 discipline** — confirm no Anthony-pings for tech calls; all decisions logged inline in `docs/COMPOSER2-RED-TEAM.md`.
 
-## Verification commands (run at commit `7d35cde`)
+## Verification commands (run at commit `fb57677`)
 
 ```powershell
-git checkout 7d35cde
+git checkout fb57677
 pnpm install
 pnpm build
 pnpm test
