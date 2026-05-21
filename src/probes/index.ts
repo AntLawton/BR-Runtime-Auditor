@@ -33,7 +33,7 @@ export async function runProbe(probeId: string, ctx: HarnessContext): Promise<Pr
     case 'storage-rules-deny':
       return runStorageRulesProbe(ctx);
     case 'real-bucket-audio-absence':
-      return runBucketScanDeferred();
+      return runBucketScanDeferred(ctx);
     case 'egress-allow-list':
       return runEgressDeferred();
     case 'structural-deferred':

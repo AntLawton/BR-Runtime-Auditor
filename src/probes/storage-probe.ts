@@ -1,11 +1,17 @@
 import type { HarnessContext } from '../types/harness.js';
 import type { ProbeResult, SubProbeResult } from '../types/probe-result.js';
 
+function storageDenyPrefix(ctx: HarnessContext): string {
+  const firstPath = ctx.sst.runtimeProbeHints.db_rules?.storage_deny_paths?.[0];
+  return firstPath?.split('/')[0] ?? 'storage-prefix';
+}
+
 export async function runStorageRulesProbe(ctx: HarnessContext): Promise<ProbeResult> {
   const paths = ctx.sst.runtimeProbeHints.db_rules?.storage_deny_paths ?? [];
   const storageLayer = ctx.sst.securityLayer.find((s) => s.layer === 'storage-rules');
+  const storagePrefix = storageDenyPrefix(ctx);
   const citation = storageLayer?.producer_file
-    ? `${storageLayer.producer_file}:igv-audio deny block`
+    ? `${storageLayer.producer_file}:${storagePrefix} deny block`
     : 'storage.rules deny block';
 
   if (!paths.length) {
@@ -55,7 +61,8 @@ export async function runStorageRulesProbe(ctx: HarnessContext): Promise<ProbeRe
   };
 }
 
-export function runBucketScanDeferred(): ProbeResult {
+export function runBucketScanDeferred(ctx: HarnessContext): ProbeResult {
+  const storagePrefix = storageDenyPrefix(ctx);
   return {
     probeId: 'real-bucket-audio-absence',
     probeName: 'Real Cloud Storage bucket prefix scan (Probe 7b)',
@@ -66,7 +73,7 @@ export function runBucketScanDeferred(): ProbeResult {
         summary:
           'HYBRID fork #1 — real-bucket scan stays in product manual runbook §Check 7 as one-time pre-launch check before 2026-05-25. Auditor delivers 7a (storage-rules-deny) only.',
         citation: 'deploy-unit/br-runtime-checks-runbook.md §Check 7',
-        command: 'gsutil ls gs://BUCKET/igv-audio/** (manual, read-only ADC)',
+        command: `gsutil ls gs://BUCKET/${storagePrefix}/** (manual, read-only ADC)`,
       },
     ],
     note: 'DEFERRED — not automated in Auditor per Hard NO #103',

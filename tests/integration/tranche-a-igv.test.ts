@@ -23,9 +23,11 @@ describe('Tranche A — IGV integration (mock emulator)', () => {
     expect(byId['real-bucket-audio-absence']?.verdict).toBe('DEFERRED');
   });
 
-  it('launch report header shows Probe 7b deferral visibly', () => {
+  it('launch report header shows Probe 7b deferral visibly', async () => {
     const sst = parseSstFile(loadFixtureSst());
-    const deferred = runBucketScanDeferred();
+    const harness = loadHarness({ sst, mockMode: true, fetchFn: createMockFetch() });
+    await harness.boot();
+    const deferred = runBucketScanDeferred(harness.getContext());
     const report = emitReport({
       sst,
       probeResults: [deferred],

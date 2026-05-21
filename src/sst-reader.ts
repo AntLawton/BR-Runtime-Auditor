@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import type { ParsedSst, RuntimeProbeHints } from './types/sst.js';
 
-const YAML_BLOCK_RE = /```yaml\n([\s\S]*?)```/;
+const YAML_BLOCK_RE = /```yaml\r?\n([\s\S]*?)```/;
 
 function extractYamlBlock(markdown: string): Record<string, unknown> {
   const match = YAML_BLOCK_RE.exec(markdown);
