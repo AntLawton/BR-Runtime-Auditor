@@ -7,6 +7,11 @@ sst_version: '0.4'
 
 meta:
   security_layer: []
+  runtime_probe_hints:
+    privacy_thresholds:
+      - name: DEFAULT_MINIMUM_AGGREGATION
+        value: 5
+        producer_file: tests/fixtures/roh/shared-constants-fixture.ts
 
 critical_contracts:
   - HI-no-individual-attribution-T1

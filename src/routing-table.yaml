@@ -6,8 +6,6 @@ rules:
   # --- voice product (12 contracts) ---
   - contract: transcription-only-ai-scope
     probe: ai-prompt-pinned
-    verdict: DEFERRED
-    note: Tranche B — static prompt-pin probe
   - contract: firestore-deny-all-client-reads
     probe: db-rules-deny
   - contract: facilitator-claim-required-with-orgId
@@ -40,14 +38,10 @@ rules:
     probe: storage-rules-deny
   - contract: prompt-level-pii-redaction
     probe: ai-prompt-pinned
-    verdict: DEFERRED
-    note: Tranche B — static prompt-pin probe
 
   # --- staff-capture product (13 contracts) ---
   - contract: HI-no-individual-attribution-T1
     probe: privacy-threshold-floors
-    verdict: DEFERRED
-    note: Tranche B — property test probe
   - contract: HI-cross-org-isolation-T2
     probe: db-rules-deny
   - contract: HI-staff-only-read-own-captures-T3
@@ -58,8 +52,6 @@ rules:
     note: Structural-only — verified by BR audit; no runtime probe
   - contract: HI-no-PII-in-classifier-output
     probe: ai-prompt-pinned
-    verdict: DEFERRED
-    note: Tranche B — static prompt-pin probe
   - contract: orgId-derived-server-side
     probe: structural-deferred
     verdict: GREEN
@@ -70,8 +62,6 @@ rules:
     note: Tranche B — multi-role auth polymorphism
   - contract: aggregation-enforcement-min-group-size-5
     probe: privacy-threshold-floors
-    verdict: DEFERRED
-    note: Tranche B — property test probe
   - contract: audio-mime-and-size-whitelist-webm-ogg-10mb
     probe: structural-deferred
     verdict: GREEN
@@ -85,15 +75,13 @@ rules:
     verdict: GREEN
     note: Structural-only — verified by BR audit; no runtime probe
 
-  # --- neighbourhood product (14 contracts) ---
+  # --- third launch product (14 contracts) ---
   - contract: HI-zero-join-Layer1-Layer2
     probe: structural-deferred
     verdict: GREEN
     note: Structural-only — verified by BR audit; no runtime probe
   - contract: HI-distinct-peppers-registration-vs-recording
     probe: pepper-distinctness
-    verdict: DEFERRED
-    note: Tranche B — pepper-distinctness probe
   - contract: HI-Layer1-PII-Layer2-3-4-PII-free
     probe: structural-deferred
     verdict: GREEN
@@ -106,8 +94,6 @@ rules:
     note: Tranche B — Postgres harness E2E
   - contract: pepper-secrets-via-Secret-Manager-in-prod
     probe: pepper-distinctness
-    verdict: DEFERRED
-    note: Tranche B — pepper-distinctness probe
   - contract: Gemini-single-multimodal-call-transcript-plus-analysis
     probe: structural-deferred
     verdict: GREEN
@@ -118,16 +104,18 @@ rules:
     note: Structural-only — verified by BR audit; no runtime probe
   - contract: min-recordings-for-aggregation-10
     probe: privacy-threshold-floors
-    verdict: DEFERRED
-    note: Tranche B — property test probe
   - contract: min-recordings-for-commission-20
     probe: privacy-threshold-floors
-    verdict: DEFERRED
-    note: Tranche B — property test probe
   - contract: k-anonymity-default-5
     probe: privacy-threshold-floors
+  - contract: region-europe-west2
+    probe: structural-deferred
+    verdict: GREEN
+    note: Structural-only — verified by BR audit; no runtime probe
+  - contract: approved-endpoints-allowlist
+    probe: egress-allow-list
     verdict: DEFERRED
-    note: Tranche B — property test probe
+    note: Manual runbook §Check 3 — VPC/egress audit post-launch
 
   # Shared region contract appears once per product SST — duplicate rows above cover each product file.
   # Catch-all for genuinely unrouted contracts (must not match any explicit row):

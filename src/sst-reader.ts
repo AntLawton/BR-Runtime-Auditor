@@ -1,7 +1,13 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { LaunchGate, ParsedSst, RuntimeProbeHints } from './types/sst.js';
+import type {
+  EnvVarContractEntry,
+  LaunchGate,
+  ParsedSst,
+  RuntimeProbeHints,
+  SpineEntry,
+} from './types/sst.js';
 
 const YAML_BLOCK_RE = /```yaml\r?\n([\s\S]*?)```/;
 
@@ -23,6 +29,24 @@ function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function parseSpine(value: unknown): SpineEntry[] {
+  return asArray<Record<string, unknown>>(value).map((entry) => {
+    const producer = asRecord(entry.producer);
+    return {
+      id: String(entry.id ?? ''),
+      producerFile: producer?.file ? String(producer.file) : undefined,
+      blockMarker: producer?.block_marker ? String(producer.block_marker) : undefined,
+    };
+  });
+}
+
+function parseEnvVarContract(meta: Record<string, unknown>): EnvVarContractEntry[] {
+  return asArray<Record<string, unknown>>(meta.env_var_contract).map((e) => ({
+    name: String(e.name ?? ''),
+    description: e.description ? String(e.description) : undefined,
+  }));
+}
+
 function parseLaunchGate(value: unknown): LaunchGate | undefined {
   const rec = asRecord(value);
   if (!rec) return undefined;
@@ -38,6 +62,8 @@ export function mergeProbeHints(
 ): RuntimeProbeHints {
   if (!overlay) return base;
   return {
+    ...base,
+    ...overlay,
     emulator: { ...base.emulator, ...overlay.emulator },
     auth: {
       protected_routes: overlay.auth?.protected_routes ?? base.auth?.protected_routes,
@@ -48,7 +74,13 @@ export function mergeProbeHints(
       firestore_deny_paths:
         overlay.db_rules?.firestore_deny_paths ?? base.db_rules?.firestore_deny_paths,
       storage_deny_paths: overlay.db_rules?.storage_deny_paths ?? base.db_rules?.storage_deny_paths,
+      postgres_deny_queries:
+        overlay.db_rules?.postgres_deny_queries ?? base.db_rules?.postgres_deny_queries,
     },
+    ai_prompt_surfaces: overlay.ai_prompt_surfaces ?? base.ai_prompt_surfaces,
+    csprng: overlay.csprng ?? base.csprng,
+    distinct_secret_pairs: overlay.distinct_secret_pairs ?? base.distinct_secret_pairs,
+    privacy_thresholds: overlay.privacy_thresholds ?? base.privacy_thresholds,
   };
 }
 
@@ -64,12 +96,23 @@ export function readProbeHintsSidecar(sstPath: string): RuntimeProbeHints | unde
   }
 }
 
+function findProjectRoot(startPath: string): string {
+  let dir = resolve(dirname(startPath));
+  for (;;) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return resolve(dirname(startPath));
+    dir = parent;
+  }
+}
+
 export function parseSstFile(sstPath: string, repoRoot?: string): ParsedSst {
   const absPath = resolve(sstPath);
+  const resolvedRepoRoot = repoRoot ? resolve(repoRoot) : findProjectRoot(absPath);
   const markdown = readFileSync(absPath, 'utf8');
   const yaml = extractYamlBlock(markdown);
   const meta = asRecord(yaml.meta) ?? {};
-  const hintsFromSst = asRecord(meta.runtime_probe_hints) as RuntimeProbeHints | undefined;
+  const hintsFromSst = meta.runtime_probe_hints as RuntimeProbeHints | undefined;
   const hintsSidecar = readProbeHintsSidecar(absPath);
   const mergedHints = mergeProbeHints(hintsFromSst ?? {}, hintsSidecar);
   const launchGate = parseLaunchGate(meta.launch_gate) ?? parseLaunchGate(mergedHints.launch_gate);
@@ -81,6 +124,8 @@ export function parseSstFile(sstPath: string, repoRoot?: string): ParsedSst {
     sstVersion: yaml.sst_version ? String(yaml.sst_version) : undefined,
     productName: mission?.slice(0, 80),
     criticalContracts: asArray<string>(yaml.critical_contracts),
+    spine: parseSpine(yaml.spine),
+    envVarContract: parseEnvVarContract(meta),
     securityLayer: asArray<Record<string, unknown>>(meta.security_layer).map((entry) => ({
       name: String(entry.name ?? ''),
       layer: String(entry.layer ?? ''),
@@ -90,7 +135,7 @@ export function parseSstFile(sstPath: string, repoRoot?: string): ParsedSst {
     })),
     runtimeProbeHints: mergedHints,
     launchGate,
-    repoRoot: repoRoot ? resolve(repoRoot) : dirname(absPath),
+    repoRoot: resolvedRepoRoot,
     sstPath: absPath,
     rawYaml: yaml,
   };

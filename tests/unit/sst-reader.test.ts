@@ -28,7 +28,11 @@ describe('routing coverage — 39 contracts across three SST fixtures', () => {
     const { buildRoutingCoverage } = await import('../../src/routing.js');
     let total = 0;
     for (const product of fixtures) {
-      const sst = parseSstFile(join(import.meta.dirname, `../fixtures/${product}/SST.md`));
+      const repoRoot = join(import.meta.dirname, '../..');
+      const sst = parseSstFile(
+        join(import.meta.dirname, `../fixtures/${product}/SST.md`),
+        repoRoot,
+      );
       const coverage = buildRoutingCoverage(sst.criticalContracts);
       total += coverage.length;
       for (const row of coverage) {

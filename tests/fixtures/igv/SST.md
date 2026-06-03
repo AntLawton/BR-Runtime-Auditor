@@ -9,6 +9,13 @@ meta:
   launch_gate:
     name: NHS
     date: '2026-05-25'
+  runtime_probe_hints:
+    ai_prompt_surfaces:
+      - id: fixture.transcribe
+        producer_file: tests/fixtures/igv/gemini-transcribe-fixture.ts
+    csprng:
+      - spine_id: igv.access_code
+        sample_module: tests/fixtures/igv/access-code-gen.ts
   security_layer:
     - name: igv-facilitator-claim-auth
       layer: auth-middleware
@@ -33,6 +40,12 @@ critical_contracts:
   - no-self-registration
   - HI-GDPR-no-audio-persistence
   - prompt-level-pii-redaction
+
+spine:
+  - id: igv.access_code
+    version: '1'
+    producer:
+      file: tests/fixtures/igv/access-code-gen.ts
 
 mission: Insight Genie Voice runtime verification fixture
 ```

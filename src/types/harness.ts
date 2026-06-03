@@ -1,5 +1,22 @@
 import type { ParsedSst } from '../types/sst.js';
 
+export interface BlockedCallRecord {
+  url: string;
+  method: string;
+  at: string;
+}
+
+export interface NetworkMockPlugin {
+  wrapFetch(base: typeof fetch): typeof fetch;
+  getBlockedCallLog(): BlockedCallRecord[];
+  reset(): void;
+  assertZeroBlockedCalls(): { ok: boolean; log: BlockedCallRecord[] };
+}
+
+export interface SecretManagerReadonly {
+  readSecret(name: string): Promise<string | undefined>;
+}
+
 export interface EmulatorConfig {
   authPort: number;
   firestorePort: number;
@@ -15,6 +32,9 @@ export interface HarnessContext {
   emulator: EmulatorConfig;
   mockMode: boolean;
   fetchFn: typeof fetch;
+  networkMock?: NetworkMockPlugin;
+  secretManager?: SecretManagerReadonly;
+  postgresAvailable?: boolean;
 }
 
 export interface HarnessPlugin {

@@ -7,6 +7,25 @@ sst_version: '0.4'
 
 meta:
   security_layer: []
+  runtime_probe_hints:
+    privacy_thresholds:
+      - name: MIN_RECORDINGS_FOR_AGGREGATION
+        value: 10
+      - name: MIN_RECORDINGS_FOR_COMMISSION
+        value: 20
+      - name: DEFAULT_K_ANONYMITY
+        value: 5
+    distinct_secret_pairs:
+      - a: NH_REGISTRATION_PEPPER
+        b: NH_RECORDING_PEPPER
+    db_rules:
+      postgres_deny_queries:
+        - SELECT 1 FROM citizens LIMIT 1
+  env_var_contract:
+    - name: NH_REGISTRATION_PEPPER
+      description: MUST be a DIFFERENT value from NH_RECORDING_PEPPER
+    - name: NH_RECORDING_PEPPER
+      description: Distinct from NH_REGISTRATION_PEPPER
 
 critical_contracts:
   - HI-zero-join-Layer1-Layer2
