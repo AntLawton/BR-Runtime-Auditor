@@ -8,9 +8,9 @@ import { runAiPromptProbe } from '../../src/probes/ai-prompt-probe.js';
 import { runCsprngProbe } from '../../src/probes/csprng-probe.js';
 import { runPepperProbe } from '../../src/probes/pepper-probe.js';
 import { runPrivacyThresholdProbe } from '../../src/probes/privacy-threshold-probe.js';
-import { sweepThreshold } from '../../src/privacy-floor.js';
 import { runTrancheBProbes } from '../../src/probes/index.js';
 import type { HarnessContext } from '../../src/types/harness.js';
+import type { ParsedSst } from '../../src/types/sst.js';
 
 const FIXTURE_ROOT = join(import.meta.dirname, '../fixtures');
 const REPO_ROOT = join(FIXTURE_ROOT, '../..');
@@ -38,22 +38,55 @@ function mockCtx(product: 'igv' | 'roh' | 'nh', secrets?: Record<string, string>
   };
 }
 
-describe('privacy-floor', () => {
-  it('catches deliberately seeded sub-threshold leak', () => {
-    const sweep = sweepThreshold(5, 2);
-    const leak = sweep.find((s) => s.groupSize === 3);
-    expect(leak?.surfaces).toBe(false);
-    const bad = { groupSize: 3, surfaces: true };
-    expect(bad.groupSize < 5 && bad.surfaces).toBe(true);
+function ctxWithSst(base: HarnessContext, sst: ParsedSst): HarnessContext {
+  return { ...base, sst };
+}
+
+describe('privacy-threshold-probe', () => {
+  it('catches deliberately seeded sub-threshold leak via product aggregation module', async () => {
+    const base = mockCtx('roh');
+    const sst: ParsedSst = {
+      ...base.sst,
+      runtimeProbeHints: {
+        ...base.sst.runtimeProbeHints,
+        privacy_thresholds: [
+          {
+            name: 'LEAKY_THRESHOLD',
+            value: 5,
+            aggregation_module: 'tests/fixtures/privacy/leaky-aggregation-fixture.ts',
+          },
+        ],
+      },
+    };
+    const result = await runPrivacyThresholdProbe(ctxWithSst(base, sst));
+    expect(result.verdict).toBe('RED');
+    expect(result.subProbes[0]?.detail).toMatch(/Sub-threshold leak/);
+    expect(result.subProbes[0]?.detail).toContain('4');
+  });
+
+  it('sweeps RoH threshold from hints with product aggregation module', async () => {
+    const result = await runPrivacyThresholdProbe(mockCtx('roh'));
+    expect(result.verdict).toBe('GREEN');
+    expect(result.subProbes.some((s) => s.id === 'DEFAULT_MINIMUM_AGGREGATION')).toBe(true);
+    expect(result.subProbes[0]?.detail).toMatch(/product output/);
+  });
+
+  it('handles three thresholds via NH aggregation module', async () => {
+    const result = await runPrivacyThresholdProbe(mockCtx('nh'));
+    expect(result.verdict).toBe('GREEN');
+    expect(result.subProbes.length).toBe(3);
   });
 });
 
 describe('ai-prompt-probe', () => {
-  it('passes mock mode with zero provider calls', async () => {
+  it('passes mock mode with zero provider calls and golden compare', async () => {
     process.env.BR_RUNTIME_CSPRNG_N = '500';
     const result = await runAiPromptProbe(mockCtx('igv'));
     expect(result.verdict).toBe('GREEN');
     expect(result.subProbes.some((s) => s.id.includes('network-mock'))).toBe(true);
+    expect(result.subProbes.some((s) => s.id.includes('golden') && s.verdict === 'GREEN')).toBe(
+      true,
+    );
   });
 });
 
@@ -66,6 +99,14 @@ describe('csprng-probe', () => {
     const result = await runCsprngProbe(mockCtx('igv'));
     expect(result.verdict).toBe('GREEN');
     expect(result.evidence[0]?.citation).toContain('csprng-probe.ts');
+  });
+
+  it('uses deterministic digest when BR_RUNTIME_DETERMINISTIC=1', async () => {
+    process.env.BR_RUNTIME_DETERMINISTIC = '1';
+    const result = await runCsprngProbe(mockCtx('igv'));
+    const stat = result.subProbes.find((s) => s.id.includes('statistical'));
+    expect(stat?.detail).toContain('sample digest deterministic');
+    delete process.env.BR_RUNTIME_DETERMINISTIC;
   });
 });
 
@@ -82,20 +123,6 @@ describe('pepper-probe', () => {
     );
     expect(result.verdict).toBe('GREEN');
     expect(result.subProbes[0]?.citation).toBeTruthy();
-  });
-});
-
-describe('privacy-threshold-probe', () => {
-  it('sweeps RoH threshold from hints', async () => {
-    const result = await runPrivacyThresholdProbe(mockCtx('roh'));
-    expect(result.verdict).toBe('GREEN');
-    expect(result.subProbes.some((s) => s.id === 'DEFAULT_MINIMUM_AGGREGATION')).toBe(true);
-  });
-
-  it('handles three NH thresholds', async () => {
-    const result = await runPrivacyThresholdProbe(mockCtx('nh'));
-    expect(result.verdict).toBe('GREEN');
-    expect(result.subProbes.length).toBe(3);
   });
 });
 

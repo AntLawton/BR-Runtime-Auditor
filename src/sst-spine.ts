@@ -11,9 +11,7 @@ const AI_SPINE_GLOBS = [
 const CSPRNG_SPINE_GLOBS = ['*.access_code', '*.magic_link', '*.token_*'];
 
 export function globToRegExp(glob: string): RegExp {
-  const escaped = glob
-    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*');
+  const escaped = glob.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
   return new RegExp(`^${escaped}$`);
 }
 

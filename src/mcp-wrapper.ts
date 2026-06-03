@@ -37,7 +37,10 @@ send({
 
 const rl = createInterface({ input: process.stdin });
 rl.on('line', (line) => {
-  let req: { id?: number; params?: { name?: string; arguments?: { sst_path?: string; mock?: boolean } } };
+  let req: {
+    id?: number;
+    params?: { name?: string; arguments?: { sst_path?: string; mock?: boolean } };
+  };
   try {
     req = JSON.parse(line) as typeof req;
   } catch {

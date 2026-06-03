@@ -45,7 +45,9 @@ export async function runDbRulesProbe(ctx: HarnessContext): Promise<ProbeResult>
       probeName: 'DB rules deny direct client reads',
       verdict: worstVerdict(subProbes),
       subProbes,
-      evidence: [{ summary: 'Postgres DAL deny-path checks', citation: 'src/probes/db-rules-probe.ts:1' }],
+      evidence: [
+        { summary: 'Postgres DAL deny-path checks', citation: 'src/probes/db-rules-probe.ts:1' },
+      ],
     };
   }
 

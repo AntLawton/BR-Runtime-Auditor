@@ -30,7 +30,7 @@ export async function runAccountDeletionProbe(ctx: HarnessContext): Promise<Prob
       evidence: [
         {
           summary:
-            'Postgres harness unavailable — E2E requires NH_DATABASE_URL + Docker per NH-DEV-TEST-WALKTHROUGH',
+            'Postgres harness unavailable — E2E requires DATABASE_URL + Docker per product dev walkthrough',
           citation: 'src/harness/postgres.ts:1',
         },
       ],

@@ -26,6 +26,7 @@ runtime_probe_hints:
   ai_prompt_surfaces:
     - id: fixture.transcribe
       producer_file: tests/fixtures/igv/gemini-transcribe-fixture.ts
+      golden_file: tests/fixtures/igv/golden/transcribe-prompt.txt
   csprng:
     - spine_id: igv.access_code
       sample_module: tests/fixtures/igv/access-code-gen.ts

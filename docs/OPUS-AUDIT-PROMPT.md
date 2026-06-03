@@ -1,10 +1,12 @@
 # Opus Audit Prompt — BR Runtime Auditor Tranche B
 
-**Audit target:** branch `feature/tranche-b-probes` (after Composer2 Tranche B complete)  
+**Audit target:** branch `feature/tranche-b-probes` (after Composer2 Tranche B complete + **2026-06-03 Opus fix-round**)  
 **Repo:** `AntLawton/BR-Runtime-Auditor`  
 **Gate:** Independent audit before Anthony runs full three-product calibration.
 
 Opus MUST diff against the Tranche B PR branch. Do not audit uncommitted working-tree changes unless Anthony expands scope.
+
+**Fix-round note (2026-06-03):** Composer2 addressed RED-1 (privacy probe tautology), golden compare, egress visibility, idempotency digest, `--mock` fetch, format, and NH token cleanup per `docs/OPUS-AUDIT-2026-06-03.md`. Re-audit items 3–6 before merge.
 
 ---
 

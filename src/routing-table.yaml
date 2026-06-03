@@ -75,7 +75,7 @@ rules:
     verdict: GREEN
     note: Structural-only — verified by BR audit; no runtime probe
 
-  # --- neighbourhood product (14 contracts) ---
+  # --- third launch product (14 contracts) ---
   - contract: HI-zero-join-Layer1-Layer2
     probe: structural-deferred
     verdict: GREEN

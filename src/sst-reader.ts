@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import type {
@@ -96,8 +96,19 @@ export function readProbeHintsSidecar(sstPath: string): RuntimeProbeHints | unde
   }
 }
 
+function findProjectRoot(startPath: string): string {
+  let dir = resolve(dirname(startPath));
+  for (;;) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return resolve(dirname(startPath));
+    dir = parent;
+  }
+}
+
 export function parseSstFile(sstPath: string, repoRoot?: string): ParsedSst {
   const absPath = resolve(sstPath);
+  const resolvedRepoRoot = repoRoot ? resolve(repoRoot) : findProjectRoot(absPath);
   const markdown = readFileSync(absPath, 'utf8');
   const yaml = extractYamlBlock(markdown);
   const meta = asRecord(yaml.meta) ?? {};
@@ -124,7 +135,7 @@ export function parseSstFile(sstPath: string, repoRoot?: string): ParsedSst {
     })),
     runtimeProbeHints: mergedHints,
     launchGate,
-    repoRoot: repoRoot ? resolve(repoRoot) : dirname(absPath),
+    repoRoot: resolvedRepoRoot,
     sstPath: absPath,
     rawYaml: yaml,
   };

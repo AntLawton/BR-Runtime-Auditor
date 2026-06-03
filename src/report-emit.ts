@@ -18,6 +18,12 @@ function worstVerdict(verdicts: Verdict[]): Verdict {
   return 'GREEN';
 }
 
+function formatRoutingStatus(r: RoutingCoverage): string {
+  if (!r.routed) return `AMBER — ${r.note ?? 'unrouted'}`;
+  if (r.verdict === 'DEFERRED') return `DEFERRED — ${r.note ?? 'manual runbook'}`;
+  return 'routed';
+}
+
 function formatSubProbes(result: ProbeResult): string {
   if (!result.subProbes.length) return '_No sub-probes._\n';
   const rows = result.subProbes.map(
@@ -91,8 +97,7 @@ export function emitReport(opts: ReportOptions): string {
     '| Contract | Probe | Status |',
     '|---|---|---|',
     ...opts.routingCoverage.map(
-      (r) =>
-        `| ${r.contract} | ${r.probe} | ${r.routed ? 'routed' : `AMBER — ${r.note ?? 'unrouted'}`} |`,
+      (r) => `| ${r.contract} | ${r.probe} | ${formatRoutingStatus(r)} |`,
     ),
     '',
     '## Probe results',

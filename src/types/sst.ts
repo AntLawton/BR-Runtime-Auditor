@@ -33,6 +33,8 @@ export interface PrivacyThresholdHint {
   name: string;
   value: number;
   producer_file?: string;
+  /** Module exporting shouldSurfaceAggregate(groupSize, thresholdName) — product aggregation output. */
+  aggregation_module?: string;
 }
 
 export interface SpineEntry {

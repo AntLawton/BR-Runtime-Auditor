@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { aiPromptSurfaces } from '../sst-spine.js';
 import { readProducerText, resolveRepoPath, worstVerdict } from '../probe-utils.js';
 import type { HarnessContext } from '../types/harness.js';
@@ -16,6 +17,29 @@ function checkPromptFile(text: string): { ok: boolean; detail: string } {
     return { ok: false, detail: 'prompt may allow summarisation language' };
   }
   return { ok: true, detail: 'temperature 0.0 and no forbidden summary language detected' };
+}
+
+async function assembleRuntimePrompt(
+  ctx: HarnessContext,
+  producerFile: string,
+): Promise<string | undefined> {
+  try {
+    const resolved = resolveRepoPath(ctx.sst, producerFile);
+    const mod = (await import(/* @vite-ignore */ pathToFileURL(resolved).href)) as {
+      assemblePrompt?: () => string;
+    };
+    if (typeof mod.assemblePrompt === 'function') return mod.assemblePrompt();
+  } catch {
+    /* fall through to producer text heuristic */
+  }
+  const text = readProducerText(ctx.sst, producerFile);
+  if (!text) return undefined;
+  const temp = text.match(/temperature\s*:\s*([\d.]+)/)?.[1] ?? '0.0';
+  const instruction =
+    text.match(/systemInstruction:\s*['"]([^'"]+)['"]/)?.[1] ??
+    text.match(/systemInstruction:\s*`([^`]+)`/)?.[1];
+  if (!instruction) return undefined;
+  return `temperature: ${temp}\nsystemInstruction: ${instruction}`;
 }
 
 export async function runAiPromptProbe(ctx: HarnessContext): Promise<ProbeResult> {
@@ -49,14 +73,27 @@ export async function runAiPromptProbe(ctx: HarnessContext): Promise<ProbeResult
     const hint = ctx.sst.runtimeProbeHints.ai_prompt_surfaces?.find((h) => h.id === surface.id);
     if (hint?.golden_file) {
       try {
-        const golden = readFileSync(resolveRepoPath(ctx.sst, hint.golden_file), 'utf8');
-        const assembledPath = resolveRepoPath(ctx.sst, hint.golden_file);
-        subProbes.push({
-          id: `${surface.id} — golden`,
-          verdict: golden.length > 0 ? 'GREEN' : 'RED',
-          detail: 'Runtime-assembled prompt compared to golden fixture',
-          citation: `${assembledPath}:1`,
-        });
+        const goldenPath = resolveRepoPath(ctx.sst, hint.golden_file);
+        const golden = readFileSync(goldenPath, 'utf8').trimEnd();
+        const assembled = await assembleRuntimePrompt(ctx, hint.producer_file ?? file);
+        if (!assembled) {
+          subProbes.push({
+            id: `${surface.id} — golden`,
+            verdict: 'AMBER',
+            detail: 'Could not assemble runtime prompt for golden compare',
+            citation: goldenPath,
+          });
+        } else {
+          const match = assembled.trimEnd() === golden;
+          subProbes.push({
+            id: `${surface.id} — golden`,
+            verdict: match ? 'GREEN' : 'RED',
+            detail: match
+              ? 'Runtime-assembled prompt matches golden fixture'
+              : 'Runtime-assembled prompt differs from golden fixture',
+            citation: goldenPath,
+          });
+        }
       } catch {
         subProbes.push({
           id: `${surface.id} — golden`,

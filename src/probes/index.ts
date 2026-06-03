@@ -23,11 +23,7 @@ const TRANCHE_B_STATIC = ['ai-prompt-pinned', 'csprng-strength', 'pepper-distinc
 const TRANCHE_B_PROPERTY = ['privacy-threshold-floors'] as const;
 const TRANCHE_B_POSTGRES = ['account-deletion-polymorphism'] as const;
 
-const TRANCHE_B_ONLY = new Set([
-  ...TRANCHE_B_STATIC,
-  ...TRANCHE_B_PROPERTY,
-  ...TRANCHE_B_POSTGRES,
-]);
+const TRANCHE_B_ONLY = new Set([...TRANCHE_B_STATIC, ...TRANCHE_B_PROPERTY, ...TRANCHE_B_POSTGRES]);
 
 export async function runProbe(probeId: string, ctx: HarnessContext): Promise<ProbeResult> {
   switch (probeId) {
@@ -93,6 +89,9 @@ export async function runTrancheAProbes(
   if (hints.auth?.public_rate_limited_routes?.length) probeIds.add('rate-limit-triggers');
   if (hints.db_rules?.firestore_deny_paths?.length) probeIds.add('db-rules-deny');
   if (hints.db_rules?.storage_deny_paths?.length) probeIds.add('storage-rules-deny');
+  if (contracts.some((c) => routeContract(c).probe === 'egress-allow-list')) {
+    probeIds.add('egress-allow-list');
+  }
   probeIds.add('real-bucket-audio-absence');
 
   const ordered = [
@@ -100,6 +99,7 @@ export async function runTrancheAProbes(
     'db-rules-deny',
     'rate-limit-triggers',
     'storage-rules-deny',
+    'egress-allow-list',
     'real-bucket-audio-absence',
   ];
   const toRun = ordered.filter((id) => probeIds.has(id) && (!filter || filter === id));

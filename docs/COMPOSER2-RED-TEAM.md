@@ -284,7 +284,7 @@ No product strings in planned `src/`. Product name from SST `meta` / spine heade
 
 | Check | Result |
 |---|---|
-| Zero product names in `src/` | **GREEN** — only `routing-table.yaml` comment "neighbourhood product" (not IGV/RoH/NH tokens); probes use SST spine ids + hints |
+| Zero product names in `src/` | **AMBER** — residual tokens were introduced in Tranche B (`NH_DATABASE_URL`, `NH-DEV-TEST-WALKTHROUGH` in account-deletion probe; "neighbourhood product" comment). **Fixed 2026-06-03 Opus fix-round** — see fix-round section below |
 | Harness plug-in pattern | **GREEN** — `network-mock` + `secret-manager-readonly` as factories; Firebase unchanged |
 | Routing SST-driven | **GREEN** — `routeContract()` + explicit rows; catch-all AMBER preserved |
 | Fixtures ≠ boundary | **GREEN** — `tests/fixtures/{igv,roh,nh}` hold calibration SSTs only |
@@ -350,3 +350,22 @@ No product strings in planned `src/`. Product name from SST `meta` / spine heade
 **Build path locked:** B1 → probes 4,5,8,10 + harness plug-ins + `runTrancheBProbes()` + routing flip; B2 → Postgres harness + probes 2-Postgres & 9 + MCP wrapper.
 
 *Tranche B Stage 1 complete.*
+
+---
+
+## Opus fix-round (2026-06-03)
+
+**Trigger:** Opus independent audit `docs/OPUS-AUDIT-2026-06-03.md` — **FIX-FIRST** (RED-1 privacy probe tautology).
+
+| Finding | Root cause | Fix applied |
+|---|---|---|
+| **RED-1** Probe #10 privacy-threshold-floors | Probe swept synthetic sizes through its own `shouldSurfaceAggregate` — leak condition `(size < T) && (size >= T)` is unsatisfiable; always GREEN | Probe now imports product `aggregation_module` hint and calls `shouldSurfaceAggregate(groupSize, name)` on real fixture modules; unit test seeds `leaky-aggregation-fixture.ts` and asserts RED |
+| **AMBER-2** AI golden compare stub | Golden branch only checked file non-empty | `assemblePrompt()` export + byte compare against golden file; IGV fixture wired |
+| **AMBER-3** Egress #3 hidden as "routed" | `egress-allow-list` excluded from orchestrator; coverage table hid DEFERRED verdict | Dispatch in `runTrancheAProbes`; routing table shows `DEFERRED — …` |
+| **AMBER-4** Idempotency | CSPRNG sample digest recomputed from fresh tokens each run | Digest pinned to `deterministic` when `BR_RUNTIME_DETERMINISTIC=1` |
+| **AMBER-5** `--mock` CLI fetch crash | Mock mode used real `fetch` for Firestore deny paths | `createMockFetch()` in `src/harness/mock-fetch.ts`; harness uses it when `mockMode` |
+| **AMBER-6** Format failures | Prettier drift on 6 files | `pnpm format:write` |
+| **AMBER-7** NH tokens in `src/` | Tranche B evidence strings copied product walkthrough names | Generic `DATABASE_URL` / "product dev walkthrough"; routing comment neutralised |
+
+**Re-audit gate:** Opus must re-run checklist items 3–6 on fixed branch before merge.
+

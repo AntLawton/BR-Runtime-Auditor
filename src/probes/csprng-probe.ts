@@ -71,7 +71,10 @@ function statisticalCheck(
       };
     }
   }
-  const digest = createHash('sha256').update(tokens.join('')).digest('hex').slice(0, 12);
+  const digest =
+    process.env.BR_RUNTIME_DETERMINISTIC === '1'
+      ? 'deterministic'
+      : createHash('sha256').update(tokens.join('')).digest('hex').slice(0, 12);
   return {
     ok: true,
     detail: `N=${CSPRNG_N} zero collisions; sample digest ${digest}`,
