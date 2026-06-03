@@ -268,3 +268,85 @@ No product strings in planned `src/`. Product name from SST `meta` / spine heade
 ---
 
 *End of Red Team pass. Stage 1 complete.*
+
+---
+
+## Tranche B red-team (2026-06-03)
+
+**Inputs read:** `COMPOSER2-TRANCHE-B-START-HERE.md`, frozen `docs/00-PHASE-A-BRIEF.md`, Tranche A red-team above, `src/routing-table.yaml`, three fixture SSTs, NH SST `env_var_contract`, Phase A brief §2/§5, Parked doc S03 notes.
+
+### Strategic forks for Anthony (scope / cost / surface only)
+
+1. **LoC budget (resolved below — no Anthony ping):** Tranche A already shipped at **~938 LoC** in `src/` (exceeds original ≤800). Tranche B adopts a **revised budget** (tech lock): **B1 ≤550 new LoC**, **B2 ≤400 new LoC**, **total `src/` cap 1,900 LoC** before re-scope. If B1 exceeds 550, defer #10 sweep breadth (use ±1 not ±2 around thresholds) rather than expand.
+2. **Real Secret Manager vs mock-only CI:** B1 pepper probe uses a read-only Secret Manager **plug-in**; production runs need `GOOGLE_APPLICATION_CREDENTIALS` or gcloud ADC. CI stays mock-only (zero GCP cost). No product-surface change.
+
+### Universal-scope verification (explicit)
+
+| Check | Result |
+|---|---|
+| Zero product names in `src/` | **GREEN** — only `routing-table.yaml` comment "neighbourhood product" (not IGV/RoH/NH tokens); probes use SST spine ids + hints |
+| Harness plug-in pattern | **GREEN** — `network-mock` + `secret-manager-readonly` as factories; Firebase unchanged |
+| Routing SST-driven | **GREEN** — `routeContract()` + explicit rows; catch-all AMBER preserved |
+| Fixtures ≠ boundary | **GREEN** — `tests/fixtures/{igv,roh,nh}` hold calibration SSTs only |
+
+### Findings summary
+
+| ID | Severity | Topic |
+|---|---|---|
+| TB-01 | GREEN | NH routing rows already present (14 contracts); shared contracts (`region-*`, `approved-endpoints-*`) reuse earlier rows |
+| TB-02 | AMBER | AI spine globs miss IGV transcription (lives in `platform-lib` `transcribeAudio`, not `*.transcribe` spine id) |
+| TB-03 | AMBER | CSPRNG N=100k slow in CI — use `BR_RUNTIME_CSPRNG_N` override in tests (1000), full 100k in production runs |
+| TB-04 | AMBER | `distinct_secret_pairs:` YAML field absent; infer from `env_var_contract` descriptions (Tranche A RT-09 lock applies) |
+| TB-05 | AMBER | Probe #9 E2E needs Postgres+Firestore+Auth — B2 integration-only; mock unit tests cover orchestration only |
+| TB-06 | AMBER | Probe #3 egress — no sandboxed VPC introspection; **keep DEFERRED** per Phase A §5 (no promotion) |
+| TB-07 | GREEN | Fail-closed for #4 via network-mock simulated provider 503 sub-probe |
+| TB-08 | GREEN | RoH multi-stage prompts need golden files — `runtime_probe_hints.ai_golden` sidecar paths, not hardcoded RoH paths in `src/` |
+| TB-09 | RED | Tranche A `runTrancheBDeferred()` still wired — must flip routing `verdict: DEFERRED` off B1 probes before ship |
+| TB-10 | GREEN | MCP wrapper is ergonomics-only; subprocess to `br-runtime` CLI, no new verification |
+
+### TB-02 — AI prompt spine gap (AMBER)
+
+**Evidence:** IGV SST spine has `igv.transcript_export` etc., not `igv.transcribe`. Runbook cites `platform-lib/.../gemini.ts:290` `transcribeAudio`.
+
+**Tech lock:** Probe #4 collects surfaces from (a) spine ids matching `*.classifier|*.enricher|*.routing|*.transcribe|*.llm_*_prompt`, plus (b) `runtime_probe_hints.ai_prompt_surfaces[]` with `{ id, producer_file }`. Without hints, AMBER per surface with citation to SST gap — not silent pass.
+
+### TB-03 — CSPRNG sample size (AMBER)
+
+**Tech lock:** Default `N=100_000` per brief; vitest sets `BR_RUNTIME_CSPRNG_N=1000`. Statistical checks: collision count = 0, chi-square coarse uniformity on bucketed char frequencies.
+
+### TB-04 — Pepper pair inference (AMBER)
+
+**Tech lock:** Parse `meta.env_var_contract` for descriptions containing `DIFFERENT value` / `Distinct from` and pair `*_PEPPER` names. Explicit `distinct_secret_pairs:` in hints overrides. Zero pairs → GREEN + note (brief §2 #8).
+
+### TB-06 — Egress deferral (AMBER)
+
+**Tech lock:** No sandboxed deploy introspection in Stage 1. Probe #3 remains `runEgressDeferred()` — visible DEFERRED + manual runbook citation. Opus ask #6 unchanged.
+
+### Revised LoC budget (resolves scope guardrail)
+
+| Slice | Cap | Rationale |
+|---|---|---|
+| Tranche A (shipped) | ~938 | Baseline — already over 800; do not refactor A to shave |
+| **B1 new** | **≤550** | 4 probes + network-mock + secret client + orchestrator + tests live in `tests/` |
+| **B2 new** | **≤400** | Postgres harness stub + db-rules postgres branch + account-deletion skeleton + MCP wrapper |
+| **Total `src/`** | **≤1,900** | Hard stop; defer #10 ±2 sweep or MCP polish first |
+
+### Contradictions resolved (tech calls)
+
+| Conflict | Resolution |
+|---|---|
+| Brief says "NH not in routing table" vs repo state | Table already has NH block — add regression test `39/39` across fixtures; no duplicate rows |
+| Phase A ≤800 LoC vs Tranche B scope | Superseded by 1,900 cap above; documented here |
+| Tranche A START-HERE lists B probes 3,7a,8,9,10 | Tranche B START-HERE narrows B1 to 4,5,8,10 + harness — **Tranche B doc wins** |
+| Findings CSPRNG N=10k vs brief 100k | Brief 100k wins (Tranche A lock) |
+
+### Stage 2 entry criteria (Tranche B)
+
+- [x] Red Team Tranche B recorded (this section)
+- [x] LoC budget fork resolved inline
+- [x] Universal-scope verified
+- [x] Egress (#3) stays DEFERRED — no sandbox path found
+
+**Build path locked:** B1 → probes 4,5,8,10 + harness plug-ins + `runTrancheBProbes()` + routing flip; B2 → Postgres harness + probes 2-Postgres & 9 + MCP wrapper.
+
+*Tranche B Stage 1 complete.*

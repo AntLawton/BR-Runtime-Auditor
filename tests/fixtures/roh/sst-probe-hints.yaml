@@ -1,0 +1,5 @@
+runtime_probe_hints:
+  privacy_thresholds:
+    - name: DEFAULT_MINIMUM_AGGREGATION
+      value: 5
+      producer_file: tests/fixtures/roh/shared-constants-fixture.ts

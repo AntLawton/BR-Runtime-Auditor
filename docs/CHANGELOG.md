@@ -1,5 +1,13 @@
 # Changelog
 
+## Tranche B (2026-06-03)
+
+- B1: probes 4, 5, 8, 10 (`ai-prompt-pinned`, `csprng-strength`, `pepper-distinctness`, `privacy-threshold-floors`)
+- Harness plug-ins: `network-mock`, `secret-manager-readonly`; `runTrancheBProbes()` wired in CLI
+- NH routing complete (39/39 fixture contracts); B1 routing rows activated
+- B2 skeleton: Postgres availability gate, account-deletion DEFERRED E2E, MCP stdio wrapper
+- `mergeProbeHints` extended for Tranche B sidecar fields
+
 ## Tranche A-fix — emulator wiring (2026-05-21)
 
 - Resolve Firebase `project_id` from target repo `.firebaserc` when sidecar uses placeholder or omits it

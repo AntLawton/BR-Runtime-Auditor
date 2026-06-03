@@ -23,3 +23,9 @@ runtime_probe_hints:
       - igv-engagements/probe-test-id
     storage_deny_paths:
       - igv-audio/engagement-1/response-1/audio.webm
+  ai_prompt_surfaces:
+    - id: fixture.transcribe
+      producer_file: tests/fixtures/igv/gemini-transcribe-fixture.ts
+  csprng:
+    - spine_id: igv.access_code
+      sample_module: tests/fixtures/igv/access-code-gen.ts

@@ -1,0 +1,14 @@
+runtime_probe_hints:
+  distinct_secret_pairs:
+    - a: NH_REGISTRATION_PEPPER
+      b: NH_RECORDING_PEPPER
+  privacy_thresholds:
+    - name: MIN_RECORDINGS_FOR_AGGREGATION
+      value: 10
+    - name: MIN_RECORDINGS_FOR_COMMISSION
+      value: 20
+    - name: DEFAULT_K_ANONYMITY
+      value: 5
+  db_rules:
+    postgres_deny_queries:
+      - SELECT 1 FROM citizens LIMIT 1

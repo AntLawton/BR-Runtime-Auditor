@@ -2,7 +2,7 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { loadHarness } from './harness/index.js';
-import { runTrancheAProbes } from './probes/index.js';
+import { runTrancheAProbes, runTrancheBProbes } from './probes/index.js';
 import { buildRoutingCoverage } from './routing.js';
 import { emitReport, writeReportPath } from './report-emit.js';
 import { parseSstFile } from './sst-reader.js';
@@ -14,12 +14,14 @@ function parseArgs(argv: string[]) {
   let repoRoot: string | undefined;
   let probeFilter: string | undefined;
   let emulatorOnly = false;
+  let trancheBOnly = false;
   let mockMode = process.env.BR_RUNTIME_MOCK === '1';
   const deterministic = process.env.BR_RUNTIME_DETERMINISTIC === '1';
 
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--emulator-only') emulatorOnly = true;
+    if (arg === '--tranche-b') trancheBOnly = true;
     else if (arg === '--mock') mockMode = true;
     else if (arg.startsWith('--target=')) repoRoot = arg.slice('--target='.length);
     else if (arg.startsWith('--probe=')) probeFilter = arg.slice('--probe='.length);
@@ -27,7 +29,7 @@ function parseArgs(argv: string[]) {
     else if (!arg.startsWith('-')) sstPath = arg;
   }
 
-  return { sstPath, repoRoot, probeFilter, emulatorOnly, mockMode, deterministic };
+  return { sstPath, repoRoot, probeFilter, emulatorOnly, trancheBOnly, mockMode, deterministic };
 }
 
 async function main(): Promise<void> {
@@ -50,7 +52,11 @@ async function main(): Promise<void> {
   try {
     await harness.boot();
     const ctx = harness.getContext();
-    const probeResults = await runTrancheAProbes(ctx, sst.criticalContracts, args.probeFilter);
+    const probeResultsA = args.trancheBOnly
+      ? []
+      : await runTrancheAProbes(ctx, sst.criticalContracts, args.probeFilter);
+    const probeResultsB = await runTrancheBProbes(ctx, sst.criticalContracts, args.probeFilter);
+    const probeResults = [...probeResultsA, ...probeResultsB];
     const routingCoverage = buildRoutingCoverage(sst.criticalContracts);
     const report = emitReport({
       sst,

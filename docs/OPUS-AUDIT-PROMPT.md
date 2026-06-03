@@ -1,37 +1,33 @@
-# Opus Audit Prompt — BR Runtime Auditor Tranche A
+# Opus Audit Prompt — BR Runtime Auditor Tranche B
 
-**Audit target commit (Tranche A):** `fb57677` — branch `feature/tranche-a-build`  
+**Audit target:** branch `feature/tranche-b-probes` (after Composer2 Tranche B complete)  
 **Repo:** `AntLawton/BR-Runtime-Auditor`  
-**Gate:** Independent audit before Anthony runs the Auditor against IGV for NHS launch (2026-05-25).
+**Gate:** Independent audit before Anthony runs full three-product calibration.
 
-Opus MUST check out or diff against commit `fb57677` exactly. Do not audit uncommitted working-tree changes or later commits unless Anthony explicitly expands scope.
+Opus MUST diff against the Tranche B PR branch. Do not audit uncommitted working-tree changes unless Anthony expands scope.
 
 ---
 
-You are Opus-in-Cursor running an independent audit on the BR Runtime Auditor build. Composer2 has finished Tranche A; this is the gate before Anthony runs the Auditor against IGV for NHS launch.
+You are Opus-in-Cursor running an independent audit on the BR Runtime Auditor **Tranche B** build. Composer2 has finished B1 (+ B2 skeleton); this is the gate before portfolio-wide runtime verification.
 
-## Context (Anthony fork decisions — locked)
+## Context (locked)
 
-1. **Probe 7b HYBRID:** Auditor delivers Probe 7a (`storage-rules-deny` via emulator) only. Real Cloud Storage bucket prefix scan is **DEFERRED** to the product manual runbook §Check 7 (one-time pre-launch before 2026-05-25). Launch report header must show this deferral visibly.
-2. **Routing:** Explicit per-contract rows in `src/routing-table.yaml`; `structural-deferred` → GREEN for non-runtime contracts; AMBER only for genuinely unrouted contracts.
-3. **Scope:** Tranche A = IGV NHS launch gate (probes 1, 2, 6, 7a). NH Probe 8 (pepper-distinctness) is Tranche B.
+1. **Universal tool** — zero product names in `src/`; IGV/RoH/NH exist only under `tests/fixtures/`.
+2. **Tranche A unchanged** — probes 1, 2, 6, 7a remain; 7b and egress stay DEFERRED/manual.
+3. **LoC budget** — Tranche A ~938 LoC; B1 ≤550 new; B2 ≤400 new; total `src/` cap 1,900 (see `docs/COMPOSER2-RED-TEAM.md` Tranche B section).
 
-## Audit checklist (Phase A brief §8 + Red Team findings)
+## Audit checklist (Tranche B brief + Red Team TB-*)
 
-1. **Routing table coverage** — every `critical_contracts:` entry across IGV/RoH/NH SST fixtures matches exactly one routing rule. Gaps = RED. Self-test: `tests/unit/sst-reader.test.ts` asserts 39/39.
-2. **Polymorphism handling** — auth probe sub-probes correctly sized for each of three role-count cases (IGV 2, RoH 3, NH 3+guest). Tranche A implements IGV path only; RoH/NH auth deferred to Tranche B must not silently pass.
-3. **Stub integrity** — confirm zero real Vertex AI / Anthropic calls during a full probe run. Verify via fetch-log recorded during integration tests (mock mode acceptable for Tranche A CI).
-4. **Egress probe (Probe 3)** — MUST surface as "DEFERRED — manual runbook §Check 3" not silently pass. Launch report header MUST show DEFERRED status visibly for Probe 7b per fork #1.
-5. **Idempotency** — running the Auditor twice against the same SST produces byte-identical reports modulo: run timestamp, emulator port, container ID, UUID in evidence paths (`BR_RUNTIME_DETERMINISTIC=1` supported).
-6. **Findings-doc parity** — first IGV run reproduces S01 findings §3 entries 1, 2, 6 as RUNTIME-VERIFIED; entry 7b as DEFERRED with runbook pointer (not automated).
-7. **Universal-scope discipline** — zero product-specific strings in `src/` (grep `IGV`, `RoH`, `NH`). `tests/fixtures/` excluded.
-8. **Fail-closed coverage** — Probes 1, 2 verify non-2xx response on dependency failure (Probe 4 fail-closed is Tranche B).
-9. **§16 + §17 discipline** — confirm no Anthony-pings for tech calls; all decisions logged inline in `docs/COMPOSER2-RED-TEAM.md`.
+1. **Routing coverage** — every `critical_contracts:` entry across all three product SST fixtures matches **exactly one** routing rule. Any unrouted entry = **RED**. Self-test: `tests/unit/sst-reader.test.ts` asserts 39/39.
+2. **Stub integrity** — confirm **zero** real Vertex AI / Anthropic calls during a full probe run (network-mock log assertion). Load-bearing for probe #4.
+3. **Pepper / threshold correctness** — probe #8 emits GREEN-with-note (not silent pass) when no distinct-secret pair is declared; probe #10 catches a deliberately seeded sub-threshold leak in unit tests (`privacy-floor` + fixture sweep).
+4. **Polymorphism** — probes size sub-probes from SST spine + hints (no hardcoded product branches); NH has 3 thresholds, RoH 1, IGV 0.
+5. **Idempotency** — two runs against the same SST produce byte-identical reports modulo timestamp, emulator ports, container IDs (`BR_RUNTIME_DETERMINISTIC=1`).
+6. **Egress + manual-deferral integrity** — probe #3 surfaces as **DEFERRED** (manual runbook §Check 3), never silently GREEN.
 
-## Verification commands (run at commit `fb57677`)
+## Verification commands
 
 ```powershell
-git checkout fb57677
 pnpm install
 pnpm build
 pnpm test
@@ -40,16 +36,19 @@ pnpm format
 rg "IGV|RoH|\bNH\b" src/
 ```
 
-## Key files to read
+## Key files
 
 | File | Purpose |
 |---|---|
-| `docs/00-PHASE-A-BRIEF.md` | Frozen Phase A contract |
-| `docs/COMPOSER2-RED-TEAM.md` | Stage 1 findings + fork decisions |
-| `src/routing-table.yaml` | 39-contract dispatch table |
-| `src/probes/` | Tranche A probe handlers |
-| `tests/integration/tranche-a-igv.test.ts` | Mock emulator integration |
-| `tests/fixtures/igv/sst-probe-hints.yaml` | Copy-ready sidecar for RoH-App |
+| `docs/COMPOSER2-RED-TEAM.md` | Tranche B red-team (2026-06-03) |
+| `src/probes/ai-prompt-probe.ts` | Probe #4 |
+| `src/probes/csprng-probe.ts` | Probe #5 |
+| `src/probes/pepper-probe.ts` | Probe #8 |
+| `src/probes/privacy-threshold-probe.ts` | Probe #10 |
+| `src/harness/network-mock.ts` | Provider-layer intercept |
+| `src/harness/secret-manager.ts` | Read-only secret plug-in |
+| `src/routing-table.yaml` | 39+ contract dispatch |
+| `tests/unit/tranche-b-probes.test.ts` | B1 mock-mode self-tests |
 
 ## Report shape
 

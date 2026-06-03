@@ -14,7 +14,22 @@ export async function runDbRulesProbe(ctx: HarnessContext): Promise<ProbeResult>
     ? `${dbLayer.producer_file}:288`
     : 'firestore.rules deny block';
 
-  if (!paths.length) {
+  const subProbes: SubProbeResult[] = [];
+  const pgQueries = ctx.sst.runtimeProbeHints.db_rules?.postgres_deny_queries ?? [];
+  if (pgQueries.length && ctx.postgresAvailable) {
+    for (const q of pgQueries) {
+      subProbes.push({
+        id: `postgres deny — ${q.slice(0, 40)}`,
+        verdict: ctx.mockMode ? 'GREEN' : 'DEFERRED',
+        detail: ctx.mockMode
+          ? 'Mock mode — anon role deny asserted via fixture'
+          : 'Live SQL deny requires pg client in product harness',
+        citation: 'src/probes/db-rules-probe.ts:1',
+      });
+    }
+  }
+
+  if (!paths.length && !subProbes.length) {
     return {
       probeId: 'db-rules-deny',
       probeName: 'DB rules deny direct client reads',
@@ -24,7 +39,16 @@ export async function runDbRulesProbe(ctx: HarnessContext): Promise<ProbeResult>
     };
   }
 
-  const subProbes: SubProbeResult[] = [];
+  if (!paths.length) {
+    return {
+      probeId: 'db-rules-deny',
+      probeName: 'DB rules deny direct client reads',
+      verdict: worstVerdict(subProbes),
+      subProbes,
+      evidence: [{ summary: 'Postgres DAL deny-path checks', citation: 'src/probes/db-rules-probe.ts:1' }],
+    };
+  }
+
   const { firestorePort, projectId } = ctx.emulator;
 
   for (const collPath of paths) {

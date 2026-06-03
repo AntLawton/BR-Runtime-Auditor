@@ -11,6 +11,41 @@ export interface LaunchGate {
   date: string;
 }
 
+export interface AiPromptSurfaceHint {
+  id: string;
+  producer_file: string;
+  block_marker?: string;
+  golden_file?: string;
+}
+
+export interface CsprngHint {
+  spine_id: string;
+  producer_file?: string;
+  sample_module?: string;
+}
+
+export interface DistinctSecretPair {
+  a: string;
+  b: string;
+}
+
+export interface PrivacyThresholdHint {
+  name: string;
+  value: number;
+  producer_file?: string;
+}
+
+export interface SpineEntry {
+  id: string;
+  producerFile?: string;
+  blockMarker?: string;
+}
+
+export interface EnvVarContractEntry {
+  name: string;
+  description?: string;
+}
+
 export interface RuntimeProbeHints {
   launch_gate?: LaunchGate;
   emulator?: {
@@ -25,7 +60,12 @@ export interface RuntimeProbeHints {
   db_rules?: {
     firestore_deny_paths?: string[];
     storage_deny_paths?: string[];
+    postgres_deny_queries?: string[];
   };
+  ai_prompt_surfaces?: AiPromptSurfaceHint[];
+  csprng?: CsprngHint[];
+  distinct_secret_pairs?: DistinctSecretPair[];
+  privacy_thresholds?: PrivacyThresholdHint[];
 }
 
 export interface SecurityLayerEntry {
@@ -43,6 +83,8 @@ export interface ParsedSst {
   productName?: string;
   criticalContracts: string[];
   securityLayer: SecurityLayerEntry[];
+  spine: SpineEntry[];
+  envVarContract: EnvVarContractEntry[];
   runtimeProbeHints: RuntimeProbeHints;
   launchGate?: LaunchGate;
   repoRoot?: string;

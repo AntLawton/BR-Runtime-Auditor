@@ -1,5 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { loadNetworkMock } from './network-mock.js';
+import { loadSecretManager } from './secret-manager.js';
+import { loadPostgresState } from './postgres.js';
 import type { HarnessContext, HarnessFactoryOptions, HarnessPlugin } from '../types/harness.js';
 import type { ParsedSst } from '../types/sst.js';
 
@@ -73,11 +76,20 @@ export class FirebaseHarness implements HarnessPlugin {
   async boot(): Promise<void> {
     const mockMode = this.opts.mockMode ?? process.env.BR_RUNTIME_MOCK === '1';
     const emulator = resolveEmulatorConfig(this.opts.sst, this.opts.repoRoot);
+    const networkMock = loadNetworkMock();
+    const baseFetch = this.opts.fetchFn ?? fetch;
+    const pg = await loadPostgresState({ mockMode });
+    const mockSecrets = process.env.BR_RUNTIME_MOCK_SECRETS
+      ? (JSON.parse(process.env.BR_RUNTIME_MOCK_SECRETS) as Record<string, string>)
+      : undefined;
     this.ctx = {
       sst: this.opts.sst,
       emulator,
       mockMode,
-      fetchFn: this.opts.fetchFn ?? fetch,
+      fetchFn: networkMock.wrapFetch(baseFetch),
+      networkMock,
+      secretManager: loadSecretManager({ mockMode, mockSecrets }),
+      postgresAvailable: pg.available,
     };
     if (mockMode) return;
     const up = await portOpen(emulator.functionsPort);
