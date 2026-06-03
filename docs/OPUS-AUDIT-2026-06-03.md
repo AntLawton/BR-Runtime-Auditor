@@ -225,3 +225,124 @@ A few smaller things: the AI-prompt check claims to compare prompts against a sa
 **My recommendation: do not merge PR #4 yet.** Send it back to fix the privacy check first (the rest can follow). Once the privacy check actually inspects real output and a proper test proves it catches a leak, this is close to mergeable.
 
 *— End of independent audit.*
+
+---
+
+## Re-audit (fix round 1, 2026-06-03)
+
+**Auditor:** Opus (independent — did not build this code, did not fix anything; execute-verify-report only)
+**Target:** `feature/tranche-b-probes` HEAD `b8a5a58` ("Fix round 1") committed on top of original `6db0d41`.
+**Method:** committed-branch re-verification of the RED + six AMBERs + regression gates, with two mandatory falsifiability probes (privacy leak, golden byte). All temporary edits were reverted; working tree was clean before and after.
+
+### Pre-flight — PASS
+
+```
+$ git status
+On branch feature/tranche-b-probes
+nothing to commit, working tree clean
+
+$ git log --oneline -2
+b8a5a58 Fix round 1: RED-1 privacy probe + six AMBERs per OPUS-AUDIT-2026-06-03
+6db0d41 Tranche B: probes 4, 5, 8, 10 and harness plug-ins.
+```
+
+HEAD is the fix-round commit on top of `6db0d41`; tree clean. Gate satisfied (not loose working-tree state). Fix-round diff surface = 31 files (incl. new `src/harness/mock-fetch.ts`, `tests/fixtures/{roh,nh}/aggregation-fixture.ts`, `tests/fixtures/privacy/leaky-aggregation-fixture.ts`, `tests/fixtures/igv/golden/transcribe-prompt.txt`).
+
+### Execution battery — ALL GREEN
+
+```
+pnpm build  → tsc && copy-routing-table.mjs        → exit 0
+pnpm test   → Test Files 6 passed (6); Tests 24 passed (24)
+pnpm lint   → eslint src tests                      → exit 0 (clean)
+pnpm format → prettier --check src tests            → "All matched files use Prettier code style!"
+rg "IGV|RoH|\bNH\b" src/                            → exit 1 (ZERO matches)
+```
+
+### 1. RED-1 — privacy-threshold-floors — **RESOLVED (now load-bearing)**
+
+The probe no longer checks its own arithmetic. It reads `t.aggregation_module` from the product hint, dynamically imports it, and calls the product's real `shouldSurfaceAggregate(groupSize, name)` (`src/probes/privacy-threshold-probe.ts:33-90`). Missing hint → `DEFERRED` (`:59-67`); unreadable module / missing export → `DEFERRED` (`:74-82`) — never GREEN. The seeded-leak unit test invokes the real `runPrivacyThresholdProbe` against `tests/fixtures/privacy/leaky-aggregation-fixture.ts` (surfaces `groupSize >= threshold-1`) and asserts RED (`tests/unit/tranche-b-probes.test.ts:46-65`).
+
+**Falsifiability probe (mandatory) — PASS.** Temporarily edited the leaky fixture to correctly suppress (`return groupSize >= threshold`), re-ran the test:
+
+```
+× privacy-threshold-probe > catches deliberately seeded sub-threshold leak via product aggregation module
+  → expected 'GREEN' to be 'RED'
+```
+
+The test FAILS when the fixture stops leaking — i.e. it genuinely depends on real product output. Edit reverted (`git diff --stat` empty); test passes again. This is a real, falsifiable probe.
+
+### 2. Fake-test check (every new/changed test in diff) — **PASS**
+
+All nine tests in `tranche-b-probes.test.ts` invoke the real probe entrypoints (`runPrivacyThresholdProbe`, `runAiPromptProbe`, `runCsprngProbe`, `runPepperProbe`, `runTrancheBProbes`) against `mockCtx(...)`; none hand-construct a result object. The original fake self-test (which built `const bad = { groupSize: 3, surfaces: true }` and tested JavaScript's `&&`) has been deleted. The only other changed test file, `sst-reader.test.ts`, is a Prettier line-wrap with no logic change. Two tests were independently proven to fail when their code-under-test regresses (RED-1 leak above; golden below).
+
+### 3. AI golden compare — **RESOLVED**
+
+`assemblePrompt()` is exported from the producer fixture (`tests/fixtures/igv/gemini-transcribe-fixture.ts:9-11`). The probe imports it, assembles the runtime prompt, and does a genuine string compare against the trimmed golden file (`src/probes/ai-prompt-probe.ts:74-96`), emitting RED on mismatch. Report row confirms a real compare: `fixture.transcribe — golden | GREEN | Runtime-assembled prompt matches golden fixture`.
+
+**Falsifiability probe (mandatory) — PASS.** Mutated one byte of `tests/fixtures/igv/golden/transcribe-prompt.txt` (`only.` → `onlx.`), re-ran the golden test:
+
+```
+× ai-prompt-probe > passes mock mode with zero provider calls and golden compare
+  → expected 'RED' to be 'GREEN'
+```
+
+One byte flips the probe non-GREEN. Golden file reverted (`git diff --stat` empty).
+
+### 4. Egress #3 visibility — **RESOLVED**
+
+`egress-allow-list` is now dispatched in `runTrancheAProbes` (`src/probes/index.ts:92-94`) and `formatRoutingStatus` renders the DEFERRED verdict (`src/report-emit.ts:23`). Rendered IGV report (mock CLI) shows it visibly DEFERRED in three places, distinct from "routed":
+
+```
+## Launch gate status (NHS 2026-05-25)
+**Visible deferrals (Anthony fork decisions recorded):**
+- **Egress allow-list integrity** — DEFERRED: ... §Check 3 (VPC/egress audit). Never silently pass.
+
+## Routing coverage
+| approved-endpoints-allowlist | egress-allow-list | DEFERRED — Manual runbook §Check 3 — VPC/egress audit post-launch |
+
+### Egress allow-list integrity (`egress-allow-list`)
+**Verdict:** DEFERRED
+```
+
+### 5. Idempotency — **RESOLVED**
+
+Two runs with `BR_RUNTIME_DETERMINISTIC=1` + `--mock` against the IGV SST, diffed with `Compare-Object`:
+
+```
+$env:BR_RUNTIME_DETERMINISTIC='1'; $env:BR_RUNTIME_MOCK='1'
+node dist/cli.js tests/fixtures/igv/SST.md --mock   (run 1 → run1.md)
+node dist/cli.js tests/fixtures/igv/SST.md --mock   (run 2 → run2.md)
+Compare-Object (Get-Content run1.md) (Get-Content run2.md)
+===DIFF (empty = identical)===
+                                            ← (no rows: byte-identical)
+```
+
+The CSPRNG digest is pinned (`csprng-probe.ts:74-77` → `sample digest deterministic`) and the timestamp is fixed (`report-emit.ts:74-76` → `1970-01-01T00:00:00.000Z`). Reports are now diffable across runs. (Temp `run1.md`/`run2.md` deleted; tree clean.)
+
+### 6. `--mock` CLI — **RESOLVED**
+
+`node dist/cli.js tests/fixtures/igv/SST.md --mock` (WITHOUT `--tranche-b`; IGV has `firestore_deny_paths`) completed offline:
+
+```
+Report written: .../tests/fixtures/igv/br-runtime-report.md
+Overall: see report
+===EXIT 0===
+```
+
+No `fetch failed`, no real network; `db-rules-deny` ran GREEN (`permission-denied (PERMISSION_DENIED)`). The harness uses `createMockFetch()` in mock mode (`src/harness/firebase.ts:81`: `const baseFetch = mockMode ? createMockFetch() : ...`), defined in `src/harness/mock-fetch.ts`.
+
+### 7. Hygiene — **PASS**
+
+`pnpm format` clean, `pnpm lint` clean, `rg` zero product tokens in `src/` (battery above). `docs/COMPOSER2-RED-TEAM.md` carries the dated `## Opus fix-round (2026-06-03)` section with a 7-row fix table (RED-1 + AMBER-2..7) and a re-audit-gate note.
+
+---
+
+## Re-audit one-line verdict
+
+**MERGE** — the load-bearing RED-1 privacy probe is now real and provably falsifiable, the golden compare is a genuine byte compare, egress is visibly DEFERRED, runs are byte-identical under deterministic mode, `--mock` is self-contained, and all hygiene gates (build/test 24/24/lint/format/zero-tokens) are green.
+
+## Plain-English summary for Anthony
+
+Everything I sent back has been fixed, and I re-checked each one by trying to break it. The big one — the privacy check that previously could never fail — now actually runs the product's own "should this small group be shown?" logic and reports DEFERRED (not a false "all good") if that logic is missing. I proved it works by feeding it a deliberately leaky version: the check correctly went RED, and when I made the version safe again the test correctly failed because there was nothing to catch. I did the same trick on the AI-prompt check: I changed a single character in the saved "golden" copy and the check immediately flagged a mismatch, so it's genuinely comparing the real prompt now. The egress item is now clearly shown as "DEFERRED — do this manually" in three places instead of hiding behind "routed"; running the tool twice gives byte-for-byte identical reports; the offline `--mock` mode no longer tries to hit the network; and formatting, linting and the "no product names in the code" rule all pass. **My recommendation: this is safe to MERGE.** Nothing remains outstanding from the items I flagged. The one thing to keep on your radar (unchanged from before, not a blocker) is that the egress/VPC check and the NH account-deletion check are still intentionally manual runbook steps, not automated — they're honestly labelled as such, but someone still has to do them by hand before the NHS launch.
+
+*— End of re-audit (fix round 1).*
