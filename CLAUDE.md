@@ -121,7 +121,9 @@ most consequential things: this is a scoping challenge, not a licence to widen t
 
 The model that builds a thing never audits it. In Cursor: `composer-2.5` for bounded builds;
 `claude-sonnet-5` for reasoning and audit by default, and `claude-opus-4-8` when the blast radius is
-FULL. Do not use `claude-fable-5`.
+FULL. Do not use `claude-fable-5` for builds or audits; by Anthony's ruling (16 July 2026) it is
+reserved for design-tier work only (estate policy, complex app or system design), confirmed with
+him (see `model-selector` v2.4 and Models-PT Q4).
 
 **Audit infrastructure by RUNNING the real tooling, never by reading the config.** Insight Genie's deploy
 workflow had never once executed in the repo's history, and an audit that actually ran it found 8 defects,
@@ -142,6 +144,24 @@ A task is not done when the code is written. It is done when:
 He runs Windows PowerShell 5.1, which rejects `&&`, and em dashes arrive mangled through the console.
 One command per line. If a script prints "DONE" it must have proved something first: a PowerShell
 transcript once silently swallowed every result and printed DONE, proving nothing.
+
+## 8. Start with session-init; never leave a vault write unverified
+
+Added 2026-07-18, on Anthony's instruction, after the failure this rule kills happened three
+times in ONE day: three different agents saved a load-bearing vault file with its tail cut off,
+none of them looked, and the loss was only caught by the next morning's Watchman run (BL-IGPT).
+The write-blocking guard that would prevent this mechanically is built and parked: Cowork hooks
+are dead (plant-tested 2026-07-15, Bible standing decision), so until the platform fixes them,
+THIS instruction is the earliest point in the chain where the failure can be stopped. Treat it
+as law 4 applied to yourself.
+
+- **Run the `session-init` front door before substantive work in every Cowork session.** It loads the Front Page, runs the open checklist and route card, and writes the session receipt (`00-Home/receipts/`). If it did not run, say so out loud and run it late - and know that saying so is a courtesy, not the mechanism: the Watchman compares estate activity against receipts daily, and a work-day with no receipt becomes a finding on its own (BL-RCPT, wired 2026-07-18). This file does not reach every session (proven 2026-07-18: it does not auto-load into cloud sessions), so this line is a reinforcement layer; the skill's own description and the receipts check are the load-bearing channels.
+- **After ANY write to a vault file, read the file's LAST LINE back.** Load-bearing files end
+  with an `END-OF-...` marker (manifest: `00-Home/watchman/load-bearing-files.tsv`). If the
+  marker is not the last line: STOP, repair before anything else, and say so. A write you have
+  not read back is a write you must assume cut the tail off the file. Every channel: host
+  tools, the device bridge, staged commits alike. The hourly snapshot now alarms on a missing
+  marker within the hour - do not let it be the one that finds yours.
 
 ---
 
